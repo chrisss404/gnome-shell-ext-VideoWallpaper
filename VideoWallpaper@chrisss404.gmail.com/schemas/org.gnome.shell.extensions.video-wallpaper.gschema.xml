@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-shell-extensions">
+    <schema path="/org/gnome/shell/extensions/video-wallpaper/"
+            id="org.gnome.shell.extensions.video-wallpaper">
+        <key name="video-store" type="a(ss)">
+            <default>[("Underwater Lights", ".local/share/gnome-shell/extensions/VideoWallpaper@chrisss404.gmail.com/UnderwaterLights.wmv"), ("Sunshine", ".local/share/gnome-shell/extensions/VideoWallpaper@chrisss404.gmail.com/Sunshine.ogv")]</default>
+        </key>
+        <key name="selected-video" type="i">
+            <default>0</default>
+        </key>
+        <key name="video-volume" type="i">
+            <default>0</default>
+        </key>
+        <key name="video-playback" type="b">
+            <default>true</default>
+        </key>
+        <key name="video-loop" type="b">
+            <default>true</default>
+        </key>
+        <key name="show-panel-button" type="b">
+            <default>true</default>
+        </key>
+    </schema>
+</schemalist>
