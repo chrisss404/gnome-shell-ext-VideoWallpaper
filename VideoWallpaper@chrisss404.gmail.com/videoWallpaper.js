@@ -55,6 +55,7 @@ const VideoWallpaper = new Lang.Class({
     Name: "VideoWallpaper",
     
     _init: function() {
+        this._enabled = false;
         this._videoWallpaperMenu = null;
         this._video = null;
         this._eosSignal = null;
@@ -71,6 +72,8 @@ const VideoWallpaper = new Lang.Class({
     },
     
     enable: function() {
+        this._enabled = true;
+
         if(this._video == null) {
             ClutterGst.init(null);
             this._video = new ClutterGst.VideoTexture({ sync_size: false });
@@ -107,14 +110,10 @@ const VideoWallpaper = new Lang.Class({
             }
 
             let backgrounds = this._backgroundGroup.get_children();
-            for(let i = 0; i < backgrounds.length; i++) {
-                let last = backgrounds[i].get_last_child();
-                Tweener.addTween(last,
-                                    { opacity: 0,
-                                      time: SHADE_ANIMATION_TIME,
-                                      transition: 'easeOutQuad'
-                                    });
-            }
+            Tweener.addTween(backgrounds[backgrounds.length - 1],
+                                { opacity: 0,
+                                  time: SHADE_ANIMATION_TIME
+                                });
             this._unshadeBackgroundsOrig();
         };
 
@@ -126,40 +125,43 @@ const VideoWallpaper = new Lang.Class({
             }
             
             let backgrounds = this._backgroundGroup.get_children();
-            for(let i = 0; i < backgrounds.length; i++) {
-                let last = backgrounds[i].get_last_child();
-                
-                Tweener.addTween(last,
-                                    { opacity: 128,
-                                      time: SHADE_ANIMATION_TIME,
-                                      transition: 'easeOutQuad'
-                                    });
-            }
+            Tweener.addTween(backgrounds[backgrounds.length - 1],
+                                {
+                                  opacity: 128,
+                                  time: SHADE_ANIMATION_TIME
+                                });
             this._shadeBackgroundsOrig();
         };
         
         BackgroundManager.prototype._videoWallpaper = this;
-        BackgroundManager.prototype._createBackgroundOrig = BackgroundManager.prototype._createBackground;
-        BackgroundManager.prototype._createBackground = function() {
-            let background = this._createBackgroundOrig();
-            if(!this._videoWallpaper.playback) {
+        BackgroundManager.prototype._clone = null;
+        BackgroundManager.prototype._createBackgroundActorOrig = BackgroundManager.prototype._createBackgroundActor;
+        BackgroundManager.prototype._createBackgroundActor = function() {
+            let background = this._createBackgroundActorOrig();
+
+            if(!this._videoWallpaper.playback || !this._videoWallpaper.enabled) {
+                if(this._clone != null) {
+                    this._clone.set_opacity(0);
+                }
                 return background;
             }
             
             let monitor = this._layoutManager.monitors[this._monitorIndex];
+            let first = this._container.get_first_child();
             
-            let first = background.actor.get_first_child();
-            first.set_background_color(new Clutter.Color( {red:0, blue:0, green:0, alpha:128} ));
-            first.set_opacity(0);
-            
-            let clone = new Clutter.Clone();
-            clone.set_source(this._videoWallpaper.video);
-            clone.set_size(monitor.width, monitor.height);
-            
-            background.actor.remove_all_children();
-            background.actor.add_actor(clone);
-            background.actor.add_actor(first);
-            
+            this._clone = new Clutter.Clone();
+            this._clone.set_source(this._videoWallpaper.video);
+            this._clone.set_size(monitor.width, monitor.height);
+
+            this._container.remove_all_children();
+            this._container.add_actor(this._clone);
+
+            if(first != null && first.background != null) {
+                first.background.set_filename('/usr/share/gnome-control-center/pixmaps/noise-texture-light.png', first.background._delegate._style);
+                first.set_opacity(0);
+                this._container.add_actor(first);
+            }
+
             return background;
         };
         
@@ -169,6 +171,10 @@ const VideoWallpaper = new Lang.Class({
     },
     
     disable: function() {
+        this._enabled = false;
+        this._video.set_playing(false);
+        this._recreateBackgroundActors();
+
         if(typeof Overview.prototype._unshadeBackgroundsOrig === "function") {
             Overview.prototype._unshadeBackgrounds = Overview.prototype._unshadeBackgroundsOrig;
             Overview.prototype._unshadeBackgroundsOrig = undefined;
@@ -177,13 +183,10 @@ const VideoWallpaper = new Lang.Class({
             Overview.prototype._shadeBackgrounds = Overview.prototype._shadeBackgroundsOrig;
             Overview.prototype._shadeBackgroundsOrig = undefined;
         }
-        if(typeof BackgroundManager.prototype._createBackgroundOrig === "function") {
-            BackgroundManager.prototype._createBackground = BackgroundManager.prototype._createBackgroundOrig;
-            BackgroundManager.prototype._createBackgroundOrig = undefined;
+        if(typeof BackgroundManager.prototype._createBackgroundActorOrig === "function") {
+            BackgroundManager.prototype._createBackgroundActor = BackgroundManager.prototype._createBackgroundActorOrig;
+            BackgroundManager.prototype._createBackgroundActorOrig = undefined;
         }
-        
-        this._recreateBackgroundActors();
-        this._video.set_playing(false);
 
         if(this._videoWallpaperMenu != null) {
             this._videoWallpaperMenu.destroy();
@@ -235,10 +238,16 @@ const VideoWallpaper = new Lang.Class({
     },
     
     _recreateBackgroundActors: function() {
+        Main.overview.hide();
         let background_schema = new Gio.Settings({ schema: SET_BACKGROUND_SCHEMA });
         background_schema.set_string(SET_BACKGROUND_KEY, background_schema.get_string(SET_BACKGROUND_KEY));
     },
 
+
+
+    get enabled() {
+        return this._enabled;
+    },
 
     
     get video() {

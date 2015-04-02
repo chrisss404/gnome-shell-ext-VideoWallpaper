@@ -1,5 +1,5 @@
 {
-    "shell-version": ["3.10"],
+    "shell-version": ["3.14"],
     "settings-schema": "org.gnome.shell.extensions.video-wallpaper", 
     "uuid": "VideoWallpaper@chrisss404.gmail.com", 
     "name": "Video Wallpaper", 
